@@ -25,6 +25,29 @@ services:
       retries: 3
       start_period: 30s
 
+  whisper-cpu:
+    container_name: foreign-whispers-stt
+    profiles: [cpu]
+    image: ghcr.io/speaches-ai/speaches:latest-cpu
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - DEVICE=cpu
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://0.0.0.0:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  chatterbox-cpu:
+    container_name: foreign-whispers-tts
+    profiles: [cpu]
+    image: travisvn/chatterbox-tts-api:latest-cpu
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - DEVICE=cpu
+
   # ── TTS (Text-to-Speech) — Chatterbox on GPU ──────────────────────
   chatterbox-gpu:
     container_name: foreign-whispers-tts
@@ -71,7 +94,7 @@ services:
       - ./pipeline_data:/app/pipeline_data
       - ./foreign_whispers:/app/foreign_whispers
       - ./api:/app/api
-      - ./cookies.txt:/app/cookies.txt
+  #    - ./cookies.txt:/app/cookies.txt
 
   # ── Frontend (Next.js) — all profiles ──────────────────────────────
   frontend:

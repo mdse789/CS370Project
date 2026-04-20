@@ -7,7 +7,7 @@ SegmentMetrics.  The translation re-ranking function is a **student assignment**
 
 import dataclasses
 import logging
-
+import ollama
 logger = logging.getLogger(__name__)
 
 
@@ -103,6 +103,64 @@ def get_shorter_translations(
     context_prev: str = "",
     context_next: str = "",
 ) -> list[TranslationCandidate]:
+    
+    # Golden Rule: 15 chars per second
+    max_chars = target_duration_s * 15.0
+    candidates = []
+
+    # 1. Always include the Baseline first
+    candidates.append(TranslationCandidate(
+        text=baseline_es,
+        char_count=len(baseline_es),
+        brevity_rationale="Baseline from ArgosTranslate"
+    ))
+
+    # 2. Check if we need to shorten it
+    if len(baseline_es) > max_chars:
+        # STRATEGY: Simple Rule-Based Shortening
+        # We can create a second candidate by swapping long phrases for short ones
+        shortened = baseline_es
+        swaps = {
+            "en este momento": "ahora",
+            "debido a que": "porque",
+            "por lo tanto": "así",
+            "con el fin de": "para"
+        }
+        
+        for long, short in swaps.items():
+            shortened = shortened.replace(long, short)
+
+        if len(shortened) < len(baseline_es):
+            candidates.append(TranslationCandidate(
+                text=shortened,
+                char_count=len(shortened),
+                brevity_rationale="Rule-based phrase contraction"
+            ))
+
+    if len(baseline_es) == 0 or len(source_text) == 0:
+        print("No text")
+    else:
+        if (len(baseline_es) / len(source_text) > 2.0) or (len(baseline_es) > max_chars):
+            llama_prompt = (
+                f"You are a translation editor for a documentary. "
+                f"The previous sentence was: '{context_prev}'. "
+                f"Translate this segment: '{source_text}' to Spanish. "
+                f"Constraint: Use under {max_chars} characters. Return ONLY the translation."
+            )
+            response = ollama.generate(model='llama3.2:1b', prompt=llama_prompt)
+            new_translation = response['response'].strip()
+
+            candidates.append(TranslationCandidate(
+                text=new_translation,
+                char_count=len(new_translation),
+                brevity_rationale="AI-generated due to high ratio"
+            ))    
+
+
+    # 3. Sort by length (shortest first) as required by the assignment
+    candidates.sort(key=lambda x: x.char_count)
+    
+    
     """Return shorter translation candidates that fit *target_duration_s*.
 
     .. admonition:: Student Assignment — Duration-Aware Translation Re-ranking
@@ -157,10 +215,12 @@ def get_shorter_translations(
     Returns:
         Empty list (stub).  Implement to return ``TranslationCandidate`` items.
     """
+    """
     logger.info(
         "get_shorter_translations called for %.1fs budget (%d chars baseline) — "
         "returning empty list (student assignment stub).",
         target_duration_s,
         len(baseline_es),
     )
-    return []
+    """
+    return candidates
