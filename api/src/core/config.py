@@ -90,7 +90,7 @@ class Settings(BaseSettings):
     hf_token: str = ""
 
     # Logfire write token — set via FW_LOGFIRE_WRITE_TOKEN (or put in .env)
-    logfire_write_token: str = ""
+    HF_TOKEN: str | None = None
 
     model_config = {"env_prefix": "FW_"}
 

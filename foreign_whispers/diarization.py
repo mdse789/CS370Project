@@ -43,3 +43,22 @@ def diarize_audio(audio_path: str, hf_token: str | None = None) -> list[dict]:
     except Exception as exc:
         logger.warning("Diarization failed for %s: %s", audio_path, exc)
         return []
+
+
+def assign_speakers(segments: list[dict], diarization_output: list[dict]) -> list[dict]:
+    for part in segments:
+        best_speaker=None
+        max_overlap=0.0
+        for segment in diarization_output:
+            speaker_start=segment['start_s']
+            speaker_end=segment['end_s']
+            seg_start=part['start']
+            seg_end=part['end']
+            current_overlap=max(0,min(seg_end,speaker_end) - max(seg_start,speaker_start))
+            if current_overlap > max_overlap:
+                max_overlap = current_overlap
+                best_speaker=segment['speaker']
+        part['speaker'] = best_speaker
+
+    return segments
+     
