@@ -1,25 +1,11 @@
-"""Speaker diarization using pyannote.audio.
-
-Extracted from notebooks/foreign_whispers_pipeline.ipynb (M2-align).
-
-Optional dependency: pyannote.audio
-    pip install pyannote.audio
-Requires accepting the pyannote/speaker-diarization-3.1 licence on HuggingFace
-and providing an HF token.  Returns empty list with a warning if the dep is
-absent or the token is missing.
-"""
+"""Speaker diarization using pyannote.audio."""
 import logging
 
 logger = logging.getLogger(__name__)
 
-
 def diarize_audio(audio_path: str, hf_token: str | None = None) -> list[dict]:
-    """Return speaker-labeled intervals for *audio_path*.
-
-    Returns:
-        List of ``{start_s: float, end_s: float, speaker: str}``.
-        Empty list when pyannote.audio is absent, token is missing, or diarization fails.
-    """
+    """Return speaker-labeled intervals for *audio_path*."""
+    # SECURITY: Token is now passed via arguments or environment, not hardcoded.
     if not hf_token:
         logger.warning("No HF token provided — diarization skipped.")
         return []
@@ -35,27 +21,38 @@ def diarize_audio(audio_path: str, hf_token: str | None = None) -> list[dict]:
             "pyannote/speaker-diarization-3.1",
             token=hf_token
         )
+        
+        print("--- AI is starting processing... ---")
         diarization = pipeline(audio_path)
         
         results = []
-        
-        # SAFETY CHECK: If it's the expected full Annotation object
-        if hasattr(diarization, "itertracks"):
-            for speech_turn, _, speaker in diarization.itertracks(yield_label=True):
+
+        # Handle the Pyannote 3.1 'DiarizeOutput' Object structure
+        if hasattr(diarization, "speaker_diarization"):
+            target = diarization.speaker_diarization
+        elif hasattr(diarization, "annotation"):
+            target = diarization.annotation
+        else:
+            target = diarization
+
+        try:
+            for segment, _, label in target.itertracks(yield_label=True):
                 results.append({
-                    "start_s": float(speech_turn.start),
-                    "end_s": float(speech_turn.end),
-                    "speaker": str(speaker)
+                    "start_s": float(segment.start),
+                    "end_s": float(segment.end),
+                    "speaker": str(label)
                 })
-        # FALLBACK: If it's a simplified dictionary/DiarizeOutput
-        elif hasattr(diarization, "items"):
-            for speech_turn, speaker in diarization.items():
-                results.append({
-                    "start_s": float(speech_turn.start),
-                    "end_s": float(speech_turn.end),
-                    "speaker": str(speaker)
-                })
-        
+        except Exception as e:
+            print(f"DEBUG: Extraction error: {e}")
+            if hasattr(target, "items"):
+                for segment, label in target.items():
+                    results.append({
+                        "start_s": float(segment.start),
+                        "end_s": float(segment.end),
+                        "speaker": str(label)
+                    })
+
+        print(f"DEBUG: Final results count: {len(results)}")
         return results
 
     except Exception as exc:
@@ -63,19 +60,19 @@ def diarize_audio(audio_path: str, hf_token: str | None = None) -> list[dict]:
         return []
 
 def diarize(segments: list[dict], diarization_output: list[dict]) -> list[dict]:
+    """Overlap matching logic for Whisper segments and Pyannote speakers."""
     for part in segments:
-        best_speaker=None
-        max_overlap=0.0
+        best_speaker = None
+        max_overlap = 0.0
         for segment in diarization_output:
-            speaker_start=segment['start_s']
-            speaker_end=segment['end_s']
-            seg_start=part['start']
-            seg_end=part['end']
-            current_overlap=max(0,min(seg_end,speaker_end) - max(seg_start,speaker_start))
+            speaker_start = segment['start_s']
+            speaker_end = segment['end_s']
+            seg_start = part['start']
+            seg_end = part['end']
+            current_overlap = max(0, min(seg_end, speaker_end) - max(seg_start, speaker_start))
             if current_overlap > max_overlap:
                 max_overlap = current_overlap
-                best_speaker=segment['speaker']
+                best_speaker = segment['speaker']
         part['speaker'] = best_speaker
 
     return segments
-     
