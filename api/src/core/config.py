@@ -65,6 +65,10 @@ class Settings(BaseSettings):
     @property
     def dubbed_captions_dir(self) -> Path:
         return self.data_dir / "dubbed_captions"
+    
+    @property
+    def diarizations_dir(self) -> Path:
+        return self.data_dir / "diarizations"
 
     # S3 storage
     s3_bucket: str = ""
@@ -90,7 +94,7 @@ class Settings(BaseSettings):
     hf_token: str = ""
 
     # Logfire write token — set via FW_LOGFIRE_WRITE_TOKEN (or put in .env)
-    HF_TOKEN: str | None = None
+    logfire_write_token: str | None = None
 
     model_config = {"env_prefix": "FW_"}
 

@@ -76,6 +76,18 @@ async def diarize_endpoint(video_id: str):
     result = {"speakers": speakers, "segments": diar_segments}
     diar_path.write_text(json.dumps(result))
     #
+
+    transcription_path = settings.transcriptions_dir / f"{title}.json"
+    if transcription_path.exists():
+            transcripted_data = json.loads(transcription_path.read_text())
+            updated_segments = _alignment_service.assign_speakers(
+                transcripted_data["segments"],
+                diar_segments
+            )
+            transcripted_data["segments"] = updated_segments
+            diar_trans_path = settings.transcriptions_dir / f"{title}_diarized.json"
+            diar_trans_path.write_text(json.dumps(transcripted_data))
+
     # Step 5: Return DiarizeResponse
     return DiarizeResponse(video_id=video_id, speakers=speakers, segments=diar_segments)
     #

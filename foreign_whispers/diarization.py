@@ -29,23 +29,40 @@ def diarize_audio(audio_path: str, hf_token: str | None = None) -> list[dict]:
     except (ImportError, TypeError):
         logger.warning("pyannote.audio not installed — returning empty diarization.")
         return []
-
+    
     try:
-        pipeline    = Pipeline.from_pretrained(
+        pipeline = Pipeline.from_pretrained(
             "pyannote/speaker-diarization-3.1",
-            use_auth_token=hf_token,
+            token=hf_token
         )
         diarization = pipeline(audio_path)
-        return [
-            {"start_s": turn.start, "end_s": turn.end, "speaker": speaker}
-            for turn, _, speaker in diarization.itertracks(yield_label=True)
-        ]
+        
+        results = []
+        
+        # SAFETY CHECK: If it's the expected full Annotation object
+        if hasattr(diarization, "itertracks"):
+            for speech_turn, _, speaker in diarization.itertracks(yield_label=True):
+                results.append({
+                    "start_s": float(speech_turn.start),
+                    "end_s": float(speech_turn.end),
+                    "speaker": str(speaker)
+                })
+        # FALLBACK: If it's a simplified dictionary/DiarizeOutput
+        elif hasattr(diarization, "items"):
+            for speech_turn, speaker in diarization.items():
+                results.append({
+                    "start_s": float(speech_turn.start),
+                    "end_s": float(speech_turn.end),
+                    "speaker": str(speaker)
+                })
+        
+        return results
+
     except Exception as exc:
-        logger.warning("Diarization failed for %s: %s", audio_path, exc)
+        logger.error(f"Diarization failed completely: {exc}")
         return []
 
-
-def assign_speakers(segments: list[dict], diarization_output: list[dict]) -> list[dict]:
+def diarize(segments: list[dict], diarization_output: list[dict]) -> list[dict]:
     for part in segments:
         best_speaker=None
         max_overlap=0.0
