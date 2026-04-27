@@ -79,7 +79,7 @@ class ChatterboxClient:
         resp = requests.post(
             f"{self.base_url}/v1/audio/speech",
             json={"input": text, "response_format": "wav"},
-            timeout=(5, 60),
+            timeout=(5, 700),
         )
         resp.raise_for_status()
         return resp.content
@@ -103,7 +103,7 @@ class ChatterboxClient:
                 f"{self.base_url}/v1/audio/speech/upload",
                 data={"input": text, "response_format": "wav"},
                 files={"voice_file": (wav_path.name, f, "audio/wav")},
-                timeout=(5, 60),
+                timeout=(5, 700),
             )
         resp.raise_for_status()
         return resp.content
@@ -196,12 +196,12 @@ def files_from_dir(dir_path) -> list:
     return es_files
 
 
-def _synthesize_raw(tts_engine, text: str, wav_path: str) -> bytes | None:
+def _synthesize_raw(tts_engine, text: str, wav_path: str, speaker_wav=None) -> bytes | None:
     """GPU-bound: call TTS engine and return raw WAV bytes, or None on failure."""
     if not text or not text.strip():
         return None
     try:
-        tts_engine.tts_to_file(text=text, file_path=wav_path)
+        tts_engine.tts_to_file(text=text, file_path=wav_path, speaker_wav=speaker_wav)
         return pathlib.Path(wav_path).read_bytes()
     except Exception as exc:
         print(f"[tts] TTS failed for segment ({exc}), using silence")
@@ -395,7 +395,7 @@ def _compute_speech_offset(source_path: str) -> float:
     return yt_start - whisper_start
 
 
-def text_file_to_speech(source_path, output_path, tts_engine=None, *, alignment=None):
+def text_file_to_speech(source_path, output_path, tts_engine=None, *, alignment=None, voice_map=None):
     """Read translated JSON with segment timestamps and produce a time-aligned WAV.
 
     Each segment is individually synthesized and time-stretched to match its
@@ -476,6 +476,11 @@ def text_file_to_speech(source_path, output_path, tts_engine=None, *, alignment=
 
     with tempfile.TemporaryDirectory() as synth_dir:
         def _do_synth(idx: int, text: str) -> tuple[int, bytes | None]:
+            # --- TASK 5 START ---
+            # Get the speaker ID from the segment metadata
+            speaker = segments[idx].get("speaker", "UNKNOWN")
+            # Pull the assigned voice from the map we built in tts_service.py
+            voice = voice_map.get(speaker) if voice_map else None
             wav_path = str(pathlib.Path(synth_dir) / f"seg_{idx}.wav")
             return idx, _synthesize_raw(engine, text, wav_path)
 

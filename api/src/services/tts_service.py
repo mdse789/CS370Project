@@ -1,5 +1,5 @@
 """HTTP-agnostic service wrapping TTS engine functions."""
-
+import json
 import pathlib
 from pathlib import Path
 from typing import Any
@@ -12,14 +12,46 @@ class TTSService:
 
     Accepts *ui_dir* and a pre-loaded *tts_engine* via constructor injection.
     """
-
+    # In api/src/services/tts_service.py
+   
     def __init__(self, ui_dir: Path, tts_engine: Any) -> None:
         self.ui_dir = ui_dir
         self.tts_engine = tts_engine
 
-    def text_file_to_speech(self, source_path: str, output_path: str, *, alignment: bool | None = None) -> None:
+    # In api/src/services/tts_service.py
+
+    def text_file_to_speech(
+        self, 
+        source_path: str, 
+        output_path: str, 
+        *, 
+        alignment: bool | None = None, 
+        diarization_path: str | None = None
+    ) -> None:
         """Generate time-aligned TTS audio from a translated JSON transcript."""
-        tts_text_file_to_speech(source_path, output_path, self.tts_engine, alignment=alignment)
+        
+        # We still build the voice_map (Task 5 logic)
+        voice_map = {}
+        if diarization_path and Path(diarization_path).exists():
+            with open(diarization_path, 'r') as f:
+                data = json.load(f)
+                unique_speakers = data.get("speakers", [])
+                # Using the "safe" voice names for Chatterbox
+                available_voices = ["af_bella", "en_male_sky", "en_female_core", "af_sarah"]
+                for i, speaker in enumerate(unique_speakers):
+                    voice_map[speaker] = available_voices[i % len(available_voices)]
+
+        # HERE IS THE CHANGE: 
+        # We remove 'diarization_path=diarization_path' from the call 
+        # so the engine stops crashing.
+        tts_text_file_to_speech(
+            source_path, 
+            output_path, 
+            self.tts_engine, 
+            alignment=alignment,
+
+            voice_map=voice_map if voice_map else None
+        )
 
     @staticmethod
     def title_for_video_id(video_id: str, search_dir: pathlib.Path) -> str | None:

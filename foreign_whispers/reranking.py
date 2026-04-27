@@ -7,7 +7,10 @@ SegmentMetrics.  The translation re-ranking function is a **student assignment**
 
 import dataclasses
 import logging
-import ollama
+try:
+    import ollama
+except ImportError:
+    ollama = None
 logger = logging.getLogger(__name__)
 
 
