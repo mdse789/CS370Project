@@ -143,12 +143,12 @@ def get_shorter_translations(
     if len(baseline_es) == 0 or len(source_text) == 0:
         print("No text")
     else:
-        if (len(baseline_es) / len(source_text) > 2.0) or (len(baseline_es) > max_chars):
+        if (len(baseline_es) > max_chars):
             llama_prompt = (
                 f"You are a translation editor for a documentary. "
                 f"The previous sentence was: '{context_prev}'. "
                 f"Translate this segment: '{source_text}' to Spanish. "
-                f"Constraint: Use under {max_chars} characters. Return ONLY the translation."
+                f"Constraint: Use under {max_chars} characters. Return ONLY the Spanish text."
             )
             response = ollama.generate(model='llama3.2:1b', prompt=llama_prompt)
             new_translation = response['response'].strip()
@@ -160,9 +160,10 @@ def get_shorter_translations(
             ))    
 
 
-    # 3. Sort by length (shortest first) as required by the assignment
+    # 3. Sort by length (shortest first)
     candidates.sort(key=lambda x: x.char_count)
     
+
     
     """Return shorter translation candidates that fit *target_duration_s*.
 

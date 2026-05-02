@@ -51,3 +51,12 @@ def clip_evaluation_report(
         "n_translation_retries":     n_retry,
         "total_cumulative_drift_s":  round(drift, 3),
     }
+
+def dubbing_scorecard(
+    metrics: list[SegmentMetrics],
+    aligned_segments: list[AlignedSegment],
+    align_report: dict
+) -> dict:
+
+    total_segments = len(aligned_segments)
+    score = 1.0 - (severe_strech_counts/ total_segments)

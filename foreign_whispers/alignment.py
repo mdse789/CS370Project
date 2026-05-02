@@ -17,7 +17,7 @@ import dataclasses
 import re
 import unicodedata
 from enum import Enum
-
+import pulp
 
 def _count_syllables(text: str) -> int:
     """Count syllables in target-language text via vowel-cluster counting.
@@ -291,3 +291,69 @@ def global_align(
         cumulative_drift += gap_shift
 
     return aligned
+
+def global_align_pd(
+    metrics:         list[SegmentMetrics],
+    silence_regions: list[dict],
+    max_stretch:     float = 1.4,
+) -> list[AlignedSegment]:
+    
+    indices = range(len(metrics))
+    start_seg=pulp.LpVariable.dicts("Start", indices, lowBound=0, cat='Continuous')
+    end_seg=pulp.LpVariable.dicts("End", indices, lowBound=0, cat='Continuous')
+    prob = pulp.LpProblem("Segment_Optimization", pulp.LpMinimize)
+
+    original_starts = {}
+
+    predicted_durs = {}
+    aligned=[]
+
+    for i in range(len(metrics)):
+        m=metrics[i]
+        original_starts[m.index] = m.source_start
+        predicted_durs[m.index] = m.predicted_tts_s
+       # action    = decide_action(m, available_gap_s=_silence_after(m.source_end))
+       # gap_shift = 0.0
+       # stretch   = 1.0
+        prob +=(end_seg[i] - start_seg[i] >=m.predicted_tts_s/max_stretch)
+        if i < len(metrics) - 1:
+            prob +=(end_seg[i] <= start_seg[i+1])
+        
+
+    prob += pulp.lpSum([start_seg[i] - metrics[i].source_start for i in range(len(metrics))])
+    prob.solve()
+
+    for i in range(len(metrics)):
+        m=metrics[i]
+
+        final_start = pulp.value(start_seg[i])
+        final_end = pulp.value(end_seg[i])
+
+        final_duration = final_end - final_start
+        stretch = m.predicted_tts_s /final_duration
+        
+        gap_shift = max(0, final_duration - m.source_duration_s)
+        
+        if final_duration > m.source_duration_s + 0.05:
+            action =AlignAction.GAP_SHIFT
+        elif stretch > 1.01:
+            action = AlignAction.MILD_STRETCH
+        else:
+            action = AlignAction.ACCEPT
+
+        aligned.append(AlignedSegment(
+            index           = m.index,
+            original_start  = m.source_start,
+            original_end    = m.source_end,
+            scheduled_start = final_start,
+            scheduled_end   = final_end,
+            text            = m.translated_text,
+            action          = action,
+            gap_shift_s     = gap_shift,
+            stretch_factor  = stretch,
+        ))
+
+
+
+    return aligned
+
