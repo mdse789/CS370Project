@@ -59,4 +59,26 @@ def dubbing_scorecard(
 ) -> dict:
 
     total_segments = len(aligned_segments)
-    score = 1.0 - (severe_strech_counts/ total_segments)
+    n_severe  = sum(1 for a in aligned_segments if a.stretch_factor > 1.4)
+    n_retry   = sum(1 for a in aligned_segments if a.action == AlignAction.REQUEST_SHORTER)
+
+    # n of characters in the original and in the  translates segment
+    source_len_total = (sum(len(m.source_text) for m in metrics))
+    translated_len_total = (sum(len(a.text) for a in aligned_segments))
+
+    len_diff = abs(source_len_total- translated_len_total) / max(1, source_len_total)
+   
+    natural_segments = sum(1 for a in aligned_segments if 0.9 <= a.stretch_factor <= 1.1)
+    
+
+    timing_score = 1.0 - (n_severe/ total_segments)
+    intelligibility = 1.0 -(n_retry/ total_segments)
+    semantic_score = max(0.0, 1.0 - len_diff)
+    naturalness_score = natural_segments / total_segments if total_segments > 0 else 0.0
+    
+    return {
+        "timing_accuracy": timing_score,      
+        "intelligibility": intelligibility,   
+        "semantic_fidelity": semantic_score,  
+        "naturalness": naturalness_score,     
+    }   

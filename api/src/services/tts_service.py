@@ -75,3 +75,7 @@ class TTSService:
         from foreign_whispers.alignment import compute_segment_metrics, global_align
         metrics = compute_segment_metrics(en_transcript, es_transcript)
         return global_align(metrics, silence_regions, max_stretch)
+
+        @property
+        def speaker_dir(self) -> Path:
+            return self.base_dir /"pipeline-data" / "speakers"
