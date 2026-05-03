@@ -20,14 +20,24 @@ class TTSService:
 
     # In api/src/services/tts_service.py
 
+   # def text_file_to_speech(
+    #    self, 
+     #   source_path: str, 
+      #  output_path: str, 
+       # *, 
+       # alignment: bool | None = None, 
+       # diarization_path: str | None = None
+    #) -> None:
+        
     def text_file_to_speech(
-        self, 
-        source_path: str, 
-        output_path: str, 
-        *, 
-        alignment: bool | None = None, 
-        diarization_path: str | None = None
-    ) -> None:
+                self, 
+                source_path: str, 
+                output_path: str,
+                *, 
+                alignment: bool | None = None,
+                speaker_wav: str | None = None) -> None:
+        tts_text_file_to_speech(source_path, output_path, self.tts_engine,
+                            alignment=alignment, speaker_wav=speaker_wav)
         """Generate time-aligned TTS audio from a translated JSON transcript."""
         
         # We still build the voice_map (Task 5 logic)
@@ -76,6 +86,6 @@ class TTSService:
         metrics = compute_segment_metrics(en_transcript, es_transcript)
         return global_align(metrics, silence_regions, max_stretch)
 
-        @property
-        def speaker_dir(self) -> Path:
-            return self.base_dir /"pipeline-data" / "speakers"
+       # @property
+       # def speaker_dir(self) -> Path:
+        #    return self.base_dir /"pipeline-data" / "speakers"
