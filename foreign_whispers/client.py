@@ -85,12 +85,14 @@ class FWClient:
         """
         return self._post("/api/download", json={"url": url})
 
-    def transcribe(self, video_id: str) -> dict:
+    def transcribe(self, video_id: str, diarize: bool = False) -> dict:
         """Run Whisper STT on a downloaded video.
 
         Returns ``{video_id, language, text, segments}``.
         """
-        return self._post(f"/api/transcribe/{video_id}")
+        return self._post(
+            f"/api/transcribe/{video_id}",
+            params={"diarize": str(diarize).lower()})
 
     def translate(self, video_id: str, target_language: str = "es") -> dict:
         """Translate transcript from source language to target language.
@@ -153,6 +155,7 @@ class FWClient:
         url: str,
         config: str = BASELINE,
         alignment: bool = False,
+        diarize: bool = True,
     ) -> dict:
         """Run the full pipeline: download → transcribe → translate → TTS → stitch.
 
@@ -160,7 +163,7 @@ class FWClient:
         """
         dl = self.download(url)
         video_id = dl["video_id"]
-        tr = self.transcribe(video_id)
+        tr = self.transcribe(video_id, diarize=diarize)
         tl = self.translate(video_id)
         tts = self.tts(video_id, config=config, alignment=alignment)
         st = self.stitch(video_id, config=config)

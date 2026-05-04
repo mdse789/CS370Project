@@ -26,7 +26,18 @@ async def translate_endpoint(
 
     title = resolve_title(video_id)
     if title is None:
-        raise HTTPException(status_code=404, detail=f"Video {video_id} not found in index")
+       raise HTTPException(status_code=404, detail=f"Video {video_id} not found in index")
+
+   
+    #if video_id == "jNQXAC9IVRw":
+    #    title = "Me at the zoo"
+    #elif video_id == "6KOxyJlgbyw":
+    #    title = "1 Minute Simple English Conversation Practice | Learn English | English Speaking Practice"
+    #else:
+     #   title = resolve_title(video_id)
+
+    #if title is None:
+    #    raise HTTPException(status_code=404, detail=f"Video {video_id} not found in index")
 
     out_path = out_dir / f"{title}.json"
 

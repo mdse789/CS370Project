@@ -222,6 +222,15 @@ async def stitch_endpoint(
     if title is None:
         raise HTTPException(status_code=404, detail=f"Video {video_id} not found")
 
+    #if video_id == "jNQXAC9IVRw":
+     #   title = "Me at the zoo"
+    #elif video_id == "6KOxyJlgbyw":
+     #   title = "1 Minute Simple English Conversation Practice | Learn English | English Speaking Practice"
+   # else:
+    #    title = resolve_title(video_id)
+
+    if title is None:
+        raise HTTPException(status_code=404, detail=f"Video {video_id} not found in index")
     output_path = output_dir / f"{title}.mp4"
 
     if output_path.exists():

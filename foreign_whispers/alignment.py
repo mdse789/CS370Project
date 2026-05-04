@@ -74,7 +74,7 @@ class SegmentMetrics:
 
     def __post_init__(self) -> None:
         syllables = _count_syllables(self.translated_text)
-        self.predicted_tts_s = (0.24 * syllables) + 0.1 
+        self.predicted_tts_s = (0.20 * syllables) + 0.01 
         self.predicted_stretch = (
             self.predicted_tts_s / self.source_duration_s
             if self.source_duration_s > 0 else 1.0

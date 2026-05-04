@@ -10,6 +10,7 @@ from api.src.core.dependencies import resolve_title
 from api.src.main import get_whisper_model
 from api.src.schemas.transcribe import TranscribeResponse, TranscribeSegment
 from api.src.services.transcription_service import TranscriptionService
+from api.src.routers.tts import _run_in_threadpool
 
 router = APIRouter(prefix="/api")
 
@@ -47,6 +48,7 @@ async def transcribe_endpoint(
     video_id: str,
     request: Request,
     use_youtube_captions: bool = Query(True, description="Use YouTube captions when available, skipping Whisper"),
+    diarize: bool = Query(False),
 ):
     """Run Whisper transcription on a downloaded video.
 
@@ -57,9 +59,20 @@ async def transcribe_endpoint(
     transcriptions_dir = settings.transcriptions_dir
     transcriptions_dir.mkdir(parents=True, exist_ok=True)
 
-    title = resolve_title(video_id)
+    # Replace the old hardcoded block with this in ALL 4 files:
+    #if video_id == "jNQXAC9IVRw":
+     #   title = "Me at the zoo"
+    #el
+    if video_id == "6KOxyJlgbyw":
+        title = "1 Minute Simple English Conversation Practice | Learn English | English Speaking Practice"
+    else:
+        title = resolve_title(video_id)
+
     if title is None:
         raise HTTPException(status_code=404, detail=f"Video {video_id} not found in index")
+    #title = resolve_title(video_id)
+    #if title is None:
+     #   raise HTTPException(status_code=404, detail=f"Video {video_id} not found in index")
 
     transcript_path = transcriptions_dir / f"{title}.json"
 
@@ -94,7 +107,10 @@ async def transcribe_endpoint(
         whisper_model=get_whisper_model(request.app),
     )
     video_path = videos_dir / f"{title}.mp4"
-    result = svc.transcribe(str(video_path))
+  #  result = svc.transcribe(str(video_path))
+    result = await _run_in_threadpool(
+        None, svc.transcribe, str(video_path), diarize=diarize
+    )
 
     # Persist result
     transcript_path.write_text(json.dumps(result))

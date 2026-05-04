@@ -39,6 +39,8 @@ async def tts_endpoint(
     audio_dir = settings.tts_audio_dir / config
     audio_dir.mkdir(parents=True, exist_ok=True)
 
+    
+
     svc = TTSService(
         ui_dir=settings.data_dir,
         tts_engine=None,
@@ -48,8 +50,46 @@ async def tts_endpoint(
     if title is None:
         raise HTTPException(status_code=404, detail=f"Video {video_id} not found in index")
     
+    
+    #if video_id == "jNQXAC9IVRw":
+     #   title = "Me at the zoo"
+    #elif video_id == "6KOxyJlgbyw":
+    #    title = "1 Minute Simple English Conversation Practice | Learn English | English Speaking Practice"
+    #else:
+     #   title = resolve_title(video_id)
+
+    
+
+   
+    trans_path = settings.translations_dir / f"{title}.json"
+
+    if not trans_path.exists():
+        
+        trans_path = settings.translations_dir / f"{video_id}.json"
+
+    if not trans_path.exists():
+        
+        trans_path = settings.translations_dir / "argos" / f"{title}.json"
+
+   
+    if not trans_path.exists():
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Transcript not found at {trans_path}"
+        )
+
+    translated = json.loads(trans_path.read_text())
+    segments = translated.get("segments", [])
+
+
+    unique_speakers = sorted(set(seg.get("speaker", "SPEAKER_00") for seg in segments))
+    voice_map = {
+        spk: resolve_speaker_wav(settings.speakers_dir, "es", spk)
+        for spk in unique_speakers
+    }
+    
     if speaker_wav is None:
-        speaker_wav = resolve_speaker_wav(settings.speaker_dir, "es")
+        speaker_wav = resolve_speaker_wav(settings.speakers_dir, "es")
 
     wav_path = audio_dir / f"{title}.wav"
 
@@ -60,12 +100,14 @@ async def tts_endpoint(
             "config": config,
         }
 
-    source_path = str(trans_dir / f"{title}.json")
+    source_path = str(trans_path)
     diarization_path = settings.data_dir / "diarizations" / f"{title}_diarized.json"
     use_diarization = diarization_path.exists()
+   # voice_map[segment["speaker"]]
+
 
     await _run_in_threadpool(
-        None, svc.text_file_to_speech, source_path, str(audio_dir), alignment=False, diarization_path=str(diarization_path) if use_diarization else None
+        None, svc.text_file_to_speech, source_path, str(audio_dir), alignment=alignment, diarization_path=str(diarization_path) if use_diarization else None, speaker_wav=speaker_wav, voice_map=voice_map
     )
 
     return {

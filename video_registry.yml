@@ -30,3 +30,15 @@ videos:
     url: https://www.youtube.com/watch?v=IiBKsv-D64M
     source_language: en
     target_language: es
+
+  - id: 6KOxyJlgbyw
+    title: "1 Minute Simple English Conversation Practice | Learn English | English Speaking Practice"
+    url: https://www.youtube.com/watch?v=6KOxyJlgbyw
+    source_language: en
+    target_language: es
+
+  - id: jNQXAC9IVRw
+    title: "Me at the zoo"
+    url: https://www.youtube.com/watch?v=jNQXAC9IVRw
+    source_language: en
+    target_language: es

@@ -71,7 +71,7 @@ class Settings(BaseSettings):
         return self.data_dir / "diarizations"
     
     @property
-    def speaker_dir(self) -> Path:
+    def speakers_dir(self) -> Path:
         return self.base_dir /"pipeline-data" / "speakers"
 
     # S3 storage
